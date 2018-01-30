@@ -2,10 +2,14 @@
 
 A tiny, simple, strict, typescript-oriented model and collection API.
 
+It allows for observation of changes to members on models and changes to items within a collection.
+
 * Zero dependencies
-* Requires a native ES6 runtime (TODO)
+* Collection index lookup requires a native ES6 runtime (for Proxy)
+* Models act like plain old objects that are observable
+* Collections act like plain old arrays that are observable
 * Similar interface to Backbone.Model and Backbone.Collection, but designed for the capabilities of ES6
-* Library size: 1,975 bytes minified (861 bytes gzip-compressed)
+* Library size: 4,309 bytes minified (1,253 bytes gzip-compressed)
 * Works well with `tsc --strict`
 
 
@@ -27,7 +31,3 @@ A tiny, simple, strict, typescript-oriented model and collection API.
 2. `cd simplemodel`
 3. `npm install`
 4. `s/dist`
-
-## Usage
-
-TODO

@@ -2,9 +2,34 @@ export type ModelChangeHandler<T, K extends keyof T> = (curr: T[K], prev: T[K]) 
 export type ModelAnyChangeHandler<T> = <K extends keyof T>(key: K, curr: T[typeof key], prev: T[typeof key]) => void;
 
 export interface ModelBehavior<T> {
+
+    /**
+     * Listen for a change in any single property
+     * 
+     * @param key the property to listen for changes on
+     * @param fn
+     * @returns a function that removes the listener when called
+     */
     on<K extends keyof T>(key: keyof T, fn: ModelChangeHandler<T, K>): () => void;
+
+    /**
+     * Listen for a change to any property
+     * 
+     * @param fn
+     * @returns a function that removes the listener when called
+     */
     onAny(fn: ModelAnyChangeHandler<T>): () => void;
+
+    /**
+     * Remove all listeners
+     */
     offAll(): void;
+
+    /**
+     * Update multiple properties atomically
+     * 
+     * @param subset subset of properties to update at once
+     */
     update(subset: Partial<T>): void;
 }
 
@@ -12,12 +37,6 @@ export type Model<T> = ModelBehavior<T> & {
     [P in keyof T]: T[P];
 };
 
-/**
- * Returns an object that one can observe member reference changes
- * performed via property assigment
- *
- * @param val The initial value of a model object
- */
 export function makeModel<T extends {}>(val: T): Model<T> {
     let state = Object.assign({}, val) as T;
     let listeners: { [K in keyof T]?: ModelChangeHandler<T, K>[] } = {};
@@ -123,14 +142,29 @@ export class Collection<T> implements Iterable<T> {
         });
     }
 
+    /**
+     * The number of items in this collection
+     */
     get length(): number {
         return this.items.length;
     }
 
     [index: number]: T | undefined;
 
+    /**
+     * Listen for items added to this collection
+     * @returns a function that removes the listener when called
+     */
     on(name: 'add', handler: CollectionItemListener<T>): () => void;
+    /**
+     * Listen for items removed from this collection
+     * @returns a function that removes the listener when called
+     */
     on(name: 'remove', handler: CollectionItemListener<T>): () => void;
+    /**
+     * Listen for a complete replacement of items in collection
+     * @returns a function that removes the listener when called
+     */
     on(name: 'reset', handler: CollectionResetListener<T>): () => void;
     on(name: 'add' | 'remove' | 'reset', handler: CollectionItemListener<T> | CollectionResetListener<T>): () => void {
         if (name === 'add') {
@@ -152,6 +186,10 @@ export class Collection<T> implements Iterable<T> {
         throw new Error('TODO: how to tell typescript this is unreachable?');
     }
 
+    /**
+     * Listen for any change to the set of items in this collection
+     * @returns a function that removes the listener when called
+     */
     onAny(handler: CollectionResetListener<T>): () => void {
         this.anyListeners.push(handler);
         return () => {
@@ -159,6 +197,9 @@ export class Collection<T> implements Iterable<T> {
         };
     }
 
+    /**
+     * Remove all listeners
+     */
     offAll(): void {
         this.addListeners = [];
         this.removeListeners = [];
@@ -166,6 +207,10 @@ export class Collection<T> implements Iterable<T> {
         this.anyListeners = [];
     }
 
+    /**
+     * Add an item to the collection. If sorted, the item will be placed at the
+     * correctly sorted index.
+     */
     add(item: T): void {
         let index: undefined | number;
         if (this.cmp === undefined || this.items.length === 0) {
@@ -198,6 +243,10 @@ export class Collection<T> implements Iterable<T> {
         this.anyListeners.forEach(fn => fn());
     }
 
+    /**
+     * Remove an item from the collection
+     * @returns true if an item was removed
+     */
     remove(item: T): boolean {
         var index = this.items.indexOf(item);
         if (index === -1) {
@@ -209,9 +258,14 @@ export class Collection<T> implements Iterable<T> {
         return true;
     }
 
+    /**
+     * Remove an item at a specific index
+     * @param index the index to remove
+     * @returns true if an item is removed
+     */
     removeAt(index: number): boolean {
-        var item = this.items[index];
-        if (item !== undefined) {
+        if (index >= 0 && index < this.items.length) {
+            var item = this.items[index];
             this.items.splice(index, 1);
             this.removeListeners.forEach(fn => fn(item, index));
             this.anyListeners.forEach(fn => fn());
@@ -220,6 +274,10 @@ export class Collection<T> implements Iterable<T> {
         return false;
     }
 
+    /**
+     * Replace all items in the collection
+     * @param newItems the replacement items
+     */
     reset(newItems: T[]): void {
         const olldItems = this.items;
         this.items = Array.from(newItems);
@@ -234,51 +292,150 @@ export class Collection<T> implements Iterable<T> {
         return this.items[Symbol.iterator]();
     }
 
+    /**
+     * Returns an iterable of key, value pairs for every entry in the array
+     */
     get entries() {
         return this.items.entries();
     }
 
+    /**
+     * Return true if all members satisfy a predicate
+     * @param fn a test predicate
+     * @returns true if all members satisfy a predicate
+     */
     every(fn: (val: T, index: number) => boolean): boolean {
         return this.items.every(fn);
     }
 
+    /**
+     * Call a visitor function for every item in the array
+     * @param fn the visitor function
+     */
     forEach(fn: (item: T, index: number, arr: T[]) => void): void {
         this.items.forEach(fn);
     }
 
+    /**
+     * Return the first member of the collection that passes a predicate
+     * @param fn the predicate test
+     * @returns the item found or `undefined` if missing
+     */
     find(fn: (item: T, index: number, arr: T[]) => boolean): T | undefined {
         return this.items.find(fn);
     }
 
+    /**
+     * Return the index of the collection that passes a predicate
+     * @param fn the predicate test
+     * @returns the index if found or `-1` if missing
+     */
     findIndex(fn: (item: T, index: number, arr: T[]) => boolean): number {
         return this.items.findIndex(fn);
     }
 
+    /**
+     * Return true if the item is present in the collection
+     * @param val the item to locate
+     */
     includes(val: T): boolean {
         return this.items.includes(val);
     }
 
+    /**
+     * Return the index of the item in the collection
+     * @param val the item to locate
+     * @returns the index if found or `-1` if missing
+     */
     indexOf(val: T): number {
         return this.items.indexOf(val);
     }
 
+    /**
+     * Calls a defined callback function on each element of an array, and
+     * returns an array that contains the results
+     * @param fn the callback function
+     * @returns an array of produced values
+     */
     map<V>(fn: (val: T, index: number) => V): V[] {
         return this.items.map(fn);
     }
 
+    /**
+     * Return an array of items which pass a predicate
+     * @param fn the predicate function
+     * @returns an array of values which pass the predicate
+     */
     filter(fn: (val: T, index: number) => boolean): T[] {
         return this.items.filter(fn);
     }
 
-    reduce<V>(fn: (acc: V, curr: T, index: number) => V, acc: V): V {
-        return this.items.reduce(fn, acc);
+    /**
+     * Accumulate a value constructed by visiting each item in the collection
+     * @param fn the accumulator function
+     * @returns the accumulated value
+     */
+    reduce(fn: (acc: T, curr: T, index: number) => T): T;
+    /**
+     * Accumulate a value constructed by visiting each item in the collection
+     * @param fn the accumulator function
+     * @param acc the initial value of the accumulator
+     * @returns the accumulated value
+     */
+    reduce(fn: (acc: T, curr: T, index: number) => T, acc: T): T;
+    /**
+     * Accumulate a value constructed by visiting each item in the collection
+     * @param fn the accumulator function
+     * @param acc the initial value of the accumulator
+     * @returns the accumulated value
+     */
+    reduce<V>(fn: (acc: V, curr: T, index: number) => V, acc?: V): V;
+    reduce<V>(fn: (acc: V | T, curr: T, index: number) => V | T, acc?: V): V | T {
+        if (arguments.length < 2) {
+            return this.items.reduce(fn as (acc: T, curr: T, index: number) => T);
+        } else {
+            return this.items.reduce(fn as (acc: V, curr: T, index: number) => V, acc as V);
+        }
     }
 
-    reduceRight<V>(fn: (acc: V, curr: T, index: number) => V, acc: V): V {
-        return this.items.reduceRight(fn, acc);
+    /**
+     * Accumulate a value constructed by visiting each item in the collection in reverse
+     * @param fn the accumulator function
+     * @returns the accumulated value
+     */
+    reduceRight(fn: (acc: T, curr: T, index: number) => T): T;
+    /**
+     * Accumulate a value constructed by visiting each item in the collection in reverse
+     * @param fn the accumulator function
+     * @param acc the initial value of the accumulator
+     * @returns the accumulated value
+     */
+    reduceRight(fn: (acc: T, curr: T, index: number) => T, acc: T): T;
+    /**
+     * Accumulate a value constructed by visiting each item in the collection in reverse
+     * @param fn the accumulator function
+     * @param acc the initial value of the accumulator
+     * @returns the accumulated value
+     */
+    reduceRight<V>(fn: (acc: V, curr: T, index: number) => V, acc?: V): V;
+    reduceRight<V>(fn: (acc: T | V, curr: T, index: number) => T | V, acc?: T | V): T | V {
+        if (arguments.length < 2) {
+            return this.items.reduceRight(fn as (acc: T, curr: T, index: number) => T);
+        } else {
+            return this.items.reduceRight(fn as (acc: V, curr: T, index: number) => V, acc as V);
+        }
     }
 
+    /**
+     * Return true if any members satisfy a predicate
+     * @param fn a test predicate
+     * @returns true if any members satisfy a predicate
+     */
     some(fn: (val: T, index: number) => boolean): boolean {
         return this.items.some(fn);
     }
 }
+
+export function makeCollection<T>(items: T[], cmp?: (a: T, b: T) => number): Collection<T> {
+    return new Collection(items, cmp);
+};
