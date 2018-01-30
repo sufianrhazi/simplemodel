@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+cd "$(dirname "$0")/.."
+s/clean
+echo "module: TypeScript -> ES5 commonjs"
+node_modules/.bin/tsc -p tsconfig.test.json
+
+./node_modules/.bin/jasmine dist/es5-commonjs/simplemodel.test.js

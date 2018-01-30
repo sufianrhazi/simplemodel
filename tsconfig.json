@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "noImplicitAny": true,
+        "outDir": "build/tsc/",
+        "sourceRoot": "src",
+        "strict": true,
+        "inlineSourceMap": true,
+        "downlevelIteration": true,
+        "lib": ["es2015","es2016","dom"]
+    }
+}

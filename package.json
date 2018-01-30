@@ -1,0 +1,29 @@
+{
+  "name": "@srhazi/simplemodel",
+  "version": "0.1.0",
+  "description": "A simple typescript/ES6-oriented model/collection API",
+  "homepage": "https://abstract.properties/work/simplemodel.html",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sufianrhazi/simplemodel.git"
+  },
+  "main": "dist/es5-commonjs/simplemodel.js",
+  "types": "dist/es5-commonjs/simplemodel.d.ts",
+  "scripts": {
+    "dist": "s/dist"
+  },
+  "keywords": [
+    "model",
+    "typescript"
+  ],
+  "author": "Sufian Rhazi <sufian@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "amdclean": "^2.7.0",
+    "typescript": "^2.6.0",
+    "jasmine": "2.9.0",
+    "@types/jasmine": "2.8.5",
+    "chai": "4.1.2",
+    "@types/chai": "4.1.2"
+  }
+}

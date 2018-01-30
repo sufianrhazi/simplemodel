@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "noImplicitAny": true,
+        "outDir": "dist/es5-commonjs/",
+        "strict": true,
+        "inlineSourceMap": true,
+        "declaration": true,
+        "downlevelIteration": true,
+        "lib": ["es2015","es2016","dom"]
+    }
+}

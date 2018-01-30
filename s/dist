@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -e
+cd "$(dirname "$0")/.."
+s/clean
+
+echo "module: TypeScript -> ES2015 module"
+node_modules/.bin/tsc \
+    --outDir dist/es2015 \
+    --target ES2015 \
+    --module es2015 \
+    --lib es2015,es2016,dom \
+    --sourceMap \
+    --strict \
+    --declaration \
+    src/simplemodel.ts
+
+echo "module: TypeScript -> ES5 commonjs"
+node_modules/.bin/tsc \
+    --outDir dist/es5-commonjs \
+    --target ES5 \
+    --module commonjs \
+    --lib es2015,es2016,dom \
+    --sourceMap \
+    --strict \
+    --declaration \
+    src/simplemodel.ts
+
+echo "lib: TypeScript -> ES5 amd"
+node_modules/.bin/tsc \
+    --outFile dist/es5-bundle/simplemodel-amd.js \
+    --target ES5 \
+    --module amd \
+    --lib es2015,es2016,dom \
+    --sourceMap \
+    --strict \
+    --declaration \
+    src/simplemodel.ts
+
+echo "lib: TypeScript -> ES5 system"
+node_modules/.bin/tsc \
+    --outFile dist/es5-bundle/simplemodel-system.js \
+    --target ES5 \
+    --module system \
+    --lib es2015,es2016,dom \
+    --sourceMap \
+    --strict \
+    src/simplemodel.ts
+
+echo "lib: ES5 amd -> ES5 browser"
+s/amdclean dist/es5-bundle/simplemodel-amd.js dist/es5-bundle/simplemodel-standalone.js
+
+echo "lib: ES5 browser -> ES5 browser (min)"
+closure-compiler \
+    --js dist/es5-bundle/simplemodel-standalone.js \
+    --language_in ECMASCRIPT5 \
+    > dist/es5-bundle/simplemodel-standalone.min.js
