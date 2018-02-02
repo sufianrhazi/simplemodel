@@ -31,3 +31,15 @@ It allows for observation of changes to members on models and changes to items w
 2. `cd simplemodel`
 3. `npm install`
 4. `s/dist`
+
+
+## Usage
+
+```ts
+import { makeModel, makeCollection } from '@srhazi/simplemodel';
+
+interface Point {
+  x: number;
+  y: number;
+}
+const position = makeModel<Point>({ x: 10, y: 10 });

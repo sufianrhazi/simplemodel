@@ -1,6 +1,8 @@
 export type ModelChangeHandler<T, K extends keyof T> = (curr: T[K], prev: T[K]) => void;
 export type ModelAnyChangeHandler<T> = <K extends keyof T>(key: K, curr: T[typeof key], prev: T[typeof key]) => void;
 
+const isModelSymbol = Symbol('isModelSymbol');
+
 export interface ModelBehavior<T> {
 
     /**
@@ -31,17 +33,24 @@ export interface ModelBehavior<T> {
      * @param subset subset of properties to update at once
      */
     update(subset: Partial<T>): void;
-}
+};
 
 export type Model<T> = ModelBehavior<T> & {
     [P in keyof T]: T[P];
 };
 
+export function isModel<M>(val: any): val is Model<M> {
+    if ((val as any)[isModelSymbol]) {
+        return true;
+    }
+    return false;
+}
+
 export function makeModel<T extends {}>(val: T): Model<T> {
     let state = Object.assign({}, val) as T;
     let listeners: { [K in keyof T]?: ModelChangeHandler<T, K>[] } = {};
     let anyListeners: ModelAnyChangeHandler<T>[] = [];
-    let model: ModelBehavior<T> = Object.defineProperties({}, {
+    let model: ModelBehavior<T> = Object.defineProperties({ [isModelSymbol]: true }, {
         on: {
             value: <K extends keyof T>(key: K, fn: ModelChangeHandler<T, K>): (() => void) => {
                 let arr = listeners[key];
@@ -108,6 +117,8 @@ export function makeModel<T extends {}>(val: T): Model<T> {
 
 export type CollectionItemListener<T> = (item: T, index: number) => void;
 export type CollectionResetListener<T> = () => void;
+export type CollectionSortListener<T> = () => void;
+export type CollectionChangeListener<T> = (item: Model<T>, index: number, field: keyof T, curr: T[typeof field], prev: T[typeof field]) => void;
 
 export class Collection<T> implements Iterable<T> {
     private items: T[];
@@ -115,18 +126,25 @@ export class Collection<T> implements Iterable<T> {
     private addListeners: CollectionItemListener<T>[];
     private removeListeners: CollectionItemListener<T>[];
     private resetListeners: CollectionResetListener<T>[];
+    private sortListeners: CollectionSortListener<T>[];
     private anyListeners: CollectionResetListener<T>[];
+    private changeListeners: CollectionChangeListener<T>[];
+    private modelListenerMap: WeakMap<T & object,() => void>;
 
     constructor(items: T[], cmp?: (a: T, b: T) => number) {
+        this.addListeners = [];
+        this.removeListeners = [];
+        this.resetListeners = [];
+        this.sortListeners = [];
+        this.anyListeners = [];
+        this.changeListeners = [];
+        this.modelListenerMap = new WeakMap();
         this.items = Array.from(items);
         if (cmp) {
             this.cmp = cmp;
             this.items.sort(this.cmp);
         }
-        this.addListeners = [];
-        this.removeListeners = [];
-        this.resetListeners = [];
-        this.anyListeners = [];
+        this.items.forEach(item => this.track(item));
         const that = this;
         return new Proxy(this, {
             get(target, property, handler): any {
@@ -166,7 +184,18 @@ export class Collection<T> implements Iterable<T> {
      * @returns a function that removes the listener when called
      */
     on(name: 'reset', handler: CollectionResetListener<T>): () => void;
-    on(name: 'add' | 'remove' | 'reset', handler: CollectionItemListener<T> | CollectionResetListener<T>): () => void {
+    /**
+     * Listen for a complete sort of items in collection
+     * @returns a function that removes the listener when called
+     */
+    on(name: 'sort', handler: CollectionSortListener<T>): () => void;
+    /**
+     * If the collection contains models, listen for changes to any
+     * of the Models in the collection.
+     * @returns a function that removes the listener when called
+     */
+    on(name: 'change', handler: CollectionChangeListener<T>): () => void;
+    on(name: 'add' | 'remove' | 'reset' | 'sort' | 'change', handler: CollectionItemListener<T> | CollectionResetListener<T> | CollectionSortListener<T> | CollectionChangeListener<T>): () => void {
         if (name === 'add') {
             this.addListeners.push(handler as CollectionItemListener<T>);
             return () => {
@@ -181,6 +210,16 @@ export class Collection<T> implements Iterable<T> {
             this.resetListeners.push(handler as CollectionResetListener<T>);
             return () => {
                 this.resetListeners = this.resetListeners.filter(f => f !== handler);
+            };
+        } else if (name === 'sort') {
+            this.sortListeners.push(handler as CollectionSortListener<T>);
+            return () => {
+                this.sortListeners = this.sortListeners.filter(f => f !== handler);
+            };
+        } else if (name === 'change') {
+            this.changeListeners.push(handler as CollectionChangeListener<T>);
+            return () => {
+                this.changeListeners = this.changeListeners.filter(f => f !== handler);
             };
         }
         throw new Error('TODO: how to tell typescript this is unreachable?');
@@ -204,12 +243,14 @@ export class Collection<T> implements Iterable<T> {
         this.addListeners = [];
         this.removeListeners = [];
         this.resetListeners = [];
+        this.sortListeners = [];
         this.anyListeners = [];
+        this.changeListeners = [];
     }
 
     /**
-     * Add an item to the collection. If sorted, the item will be placed at the
-     * correctly sorted index.
+     * Add a Model to the collection.
+     * If sorted, the item will be placed at the correctly sorted index.
      */
     add(item: T): void {
         let index: undefined | number;
@@ -239,8 +280,29 @@ export class Collection<T> implements Iterable<T> {
             }
             this.items.splice(index, 0, item);
         }
+        this.track(item);
         this.addListeners.forEach(fn => fn(item, index!));
         this.anyListeners.forEach(fn => fn());
+    }
+
+    private track(item: T) {
+        if (isModel(item)) {
+            const off = item.onAny((field, curr, prev) => {
+                const index = this.indexOf(item);
+                this.changeListeners.forEach(fn => fn(item as any, index, field, curr, prev));
+            });
+            this.modelListenerMap.set(item, off);
+        }
+    }
+
+    private cleanUp(item: T) {
+        if (isModel(item)) {
+            const off = this.modelListenerMap.get(item);
+            if (off) {
+                off();
+                this.modelListenerMap.delete(item);
+            }
+        }
     }
 
     /**
@@ -255,6 +317,7 @@ export class Collection<T> implements Iterable<T> {
         this.items.splice(index, 1);
         this.removeListeners.forEach(fn => fn(item, index));
         this.anyListeners.forEach(fn => fn());
+        this.cleanUp(item);
         return true;
     }
 
@@ -269,6 +332,7 @@ export class Collection<T> implements Iterable<T> {
             this.items.splice(index, 1);
             this.removeListeners.forEach(fn => fn(item, index));
             this.anyListeners.forEach(fn => fn());
+            this.cleanUp(item);
             return true;
         }
         return false;
@@ -279,7 +343,8 @@ export class Collection<T> implements Iterable<T> {
      * @param newItems the replacement items
      */
     reset(newItems: T[]): void {
-        const olldItems = this.items;
+        const oldItems = this.items;
+        oldItems.forEach(item => this.cleanUp(item));
         this.items = Array.from(newItems);
         if (this.cmp) {
             this.items.sort(this.cmp);
@@ -433,6 +498,22 @@ export class Collection<T> implements Iterable<T> {
      */
     some(fn: (val: T, index: number) => boolean): boolean {
         return this.items.some(fn);
+    }
+
+    /**
+     * Sort the collection and set the comparison function to be cmp (if provided)
+     * @param cmp the comparison function
+     */
+    sort(cmp?: (a: T, b: T) => number): void {
+        if (cmp !== undefined) {
+            this.cmp = cmp;
+        }
+        if (this.cmp === undefined) {
+            this.items.sort();
+        } else {
+            this.items.sort(this.cmp);
+        }
+        this.sortListeners.forEach(fn => fn());
     }
 }
 

@@ -1,7 +1,7 @@
 /// <reference path="../node_modules/@types/jasmine/index.d.ts" />
 
 import { assert } from "chai";
-import { makeModel, makeCollection } from './simplemodel';
+import { makeModel, makeCollection, Model } from './simplemodel';
 
 describe('model', () => {
     it('acts like an object', () => {
@@ -281,5 +281,74 @@ describe('collection', () => {
         off();
         c.reset(['d', 'b', 'c']);
         assert.strictEqual(3, numChanges);
+    });
+    it('can be sorted on demand', () => {
+        const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
+        assert.deepEqual(['a', 'b', 'c'], c.map(item => item.v));
+        c[0]!.p = 2.5;
+        assert.deepEqual(['a', 'b', 'c'], c.map(item => item.v));
+        c.sort();
+        assert.deepEqual(['b', 'a', 'c'], c.map(item => item.v));
+    });
+    it('triggers sort on sorted', () => {
+        const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
+        let numResets = 0;
+        c.on('sort', () => numResets++);
+        c.sort();
+        assert.strictEqual(1, numResets);
+    });
+    it('can have a configurable sort function', () => {
+        const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
+        assert.deepEqual(['a', 'b', 'c'], c.map(item => item.v));
+        c.sort((a, b) => b.p - a.p);
+        assert.deepEqual(['c', 'b', 'a'], c.map(item => item.v));
+        c.add({p: 2.5, v: 'x'});
+        assert.deepEqual(['c', 'x', 'b', 'a'], c.map(item => item.v));
+    });
+    it('triggers change events when model items are changed', () => {
+        const a = makeModel({x: 1, y: 3});
+        const b = makeModel({x: 2, y: 4});
+        const c = makeCollection([a], (a, b) => a.x - b.x);
+        c.add(b);
+        const changes: any[] = [];
+        const off = c.on('change', (item, index, field, curr, prev) => {
+            changes.push({item, index, field, curr, prev});
+        });
+        a.x = 10;
+        b.y = 14;
+        c.sort();
+        b.y = 20;
+        a.y = 10;
+        c.remove(b);
+        b.y = 4;
+        off();
+        a.x = 1;
+
+        assert.strictEqual(4, changes.length);
+        // a.x was 1 became 10
+        assert.strictEqual(a, changes[0].item);
+        assert.strictEqual(0, changes[0].index);
+        assert.strictEqual('x', changes[0].field);
+        assert.strictEqual(1, changes[0].prev);
+        assert.strictEqual(10, changes[0].curr);
+        // b.y was 4 became 14
+        assert.strictEqual(b, changes[1].item);
+        assert.strictEqual(1, changes[1].index);
+        assert.strictEqual('y', changes[1].field);
+        assert.strictEqual(4, changes[1].prev);
+        assert.strictEqual(14, changes[1].curr);
+        // sort changed, order now [b,a]
+        // b.y was 14 became 20
+        assert.strictEqual(b, changes[2].item);
+        assert.strictEqual(0, changes[2].index);
+        assert.strictEqual('y', changes[2].field);
+        assert.strictEqual(14, changes[2].prev);
+        assert.strictEqual(20, changes[2].curr);
+        // a.y was 3 became 10
+        assert.strictEqual(a, changes[3].item);
+        assert.strictEqual(1, changes[3].index);
+        assert.strictEqual('y', changes[3].field);
+        assert.strictEqual(3, changes[3].prev);
+        assert.strictEqual(10, changes[3].curr);        
     });
 });
