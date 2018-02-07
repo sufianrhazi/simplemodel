@@ -12,7 +12,7 @@ It allows for observation of changes to members on models and changes to items w
 * Library size: 4,309 bytes minified (1,253 bytes gzip-compressed)
 * Works well with `tsc --strict`
 
-This library is inspired by Backbone's Model and Collection classes, but written as if Backbone was created after `Proxy` was standardized.
+This library is heavily inspired by Backbone's Model and Collection classes, but without all of the boilerplate (by leveraging `Proxy` and `Object.defineProperties`).
 
 
 ## Installation
