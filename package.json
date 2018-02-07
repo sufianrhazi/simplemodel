@@ -10,7 +10,8 @@
   "main": "dist/es5-commonjs/simplemodel.js",
   "types": "dist/es5-commonjs/simplemodel.d.ts",
   "scripts": {
-    "dist": "s/dist"
+    "dist": "s/dist",
+    "test": "s/test"
   },
   "keywords": [
     "model",

@@ -297,6 +297,16 @@ describe('collection', () => {
         c.sort();
         assert.strictEqual(1, numResets);
     });
+    it('has a stable sort', () => {
+        const c = makeCollection<{val: number}>([], (a, b) => 0);
+        for (var i = 0; i < 100; ++i) {
+            c.add({val: i});
+        }
+        c.sort();
+        for (var i = 0; i < 100; ++i) {
+            assert.strictEqual(i, c[i]!.val);
+        }
+    });
     it('can have a configurable sort function', () => {
         const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
         assert.deepEqual(['a', 'b', 'c'], c.map(item => item.v));
@@ -310,7 +320,13 @@ describe('collection', () => {
         const b = makeModel({x: 2, y: 4});
         const c = makeCollection([a], (a, b) => a.x - b.x);
         c.add(b);
-        const changes: any[] = [];
+        const changes: {
+            item: Model<{x: number, y: number}>,
+            index: number,
+            field: 'x' | 'y',
+            curr: number,
+            prev: number,
+        }[] = [];
         const off = c.on('change', (item, index, field, curr, prev) => {
             changes.push({item, index, field, curr, prev});
         });
@@ -351,4 +367,5 @@ describe('collection', () => {
         assert.strictEqual(3, changes[3].prev);
         assert.strictEqual(10, changes[3].curr);        
     });
+    
 });

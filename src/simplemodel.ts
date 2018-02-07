@@ -1,7 +1,8 @@
 export type ModelChangeHandler<T, K extends keyof T> = (curr: T[K], prev: T[K]) => void;
 export type ModelAnyChangeHandler<T> = <K extends keyof T>(key: K, curr: T[typeof key], prev: T[typeof key]) => void;
 
-const isModelSymbol = Symbol('isModelSymbol');
+function ModelPrototype() {
+}
 
 export interface ModelBehavior<T> {
 
@@ -35,12 +36,31 @@ export interface ModelBehavior<T> {
     update(subset: Partial<T>): void;
 };
 
-export type Model<T> = ModelBehavior<T> & {
-    [P in keyof T]: T[P];
+export type Model<T> = ModelBehavior<T> & T;
+
+export type Subtract<A extends string, B extends string> = ({
+    [x: string]: never
+} & {
+    [K in A]: K
+} & {
+    [K in B]: never
+})[A];
+
+/**
+ * Since Model<T> = ModelBehavior<T> & T
+ * ...and Subtract<keyof A, keyof B> is effectively (keyof A - keyof B)
+ * ...then {[K in Subtract<keyof T, keyof ModelBehavior<T>>]: T[K]}
+ * Therefore UnModel<T> is most likely a no-op if T is not a model
+ * ...and UnModel<Model<T>> is T
+ * 
+ * Bad Things™ will happen if T shares any of the same fields as ModelBehavior<T>
+ */
+export type UnModel<T> = {
+    [K in Subtract<keyof T, keyof ModelBehavior<T>>]: T[K];
 };
 
 export function isModel<M>(val: any): val is Model<M> {
-    if ((val as any)[isModelSymbol]) {
+    if (val instanceof ModelPrototype) {
         return true;
     }
     return false;
@@ -50,7 +70,7 @@ export function makeModel<T extends {}>(val: T): Model<T> {
     let state = Object.assign({}, val) as T;
     let listeners: { [K in keyof T]?: ModelChangeHandler<T, K>[] } = {};
     let anyListeners: ModelAnyChangeHandler<T>[] = [];
-    let model: ModelBehavior<T> = Object.defineProperties({ [isModelSymbol]: true }, {
+    let model: ModelBehavior<T> = Object.defineProperties(Object.create(ModelPrototype.prototype), {
         on: {
             value: <K extends keyof T>(key: K, fn: ModelChangeHandler<T, K>): (() => void) => {
                 let arr = listeners[key];
@@ -118,9 +138,9 @@ export function makeModel<T extends {}>(val: T): Model<T> {
 export type CollectionItemListener<T> = (item: T, index: number) => void;
 export type CollectionResetListener<T> = () => void;
 export type CollectionSortListener<T> = () => void;
-export type CollectionChangeListener<T> = (item: Model<T>, index: number, field: keyof T, curr: T[typeof field], prev: T[typeof field]) => void;
+export type CollectionChangeListener<M extends keyof T,T> = (item: T, index: number, field: M, curr: T[typeof field], prev: T[typeof field]) => void;
 
-export class Collection<T> implements Iterable<T> {
+export class Collection<M extends keyof T,T> implements Iterable<T> {
     private items: T[];
     private cmp: undefined | ((a: T, b: T) => number);
     private addListeners: CollectionItemListener<T>[];
@@ -128,7 +148,7 @@ export class Collection<T> implements Iterable<T> {
     private resetListeners: CollectionResetListener<T>[];
     private sortListeners: CollectionSortListener<T>[];
     private anyListeners: CollectionResetListener<T>[];
-    private changeListeners: CollectionChangeListener<T>[];
+    private changeListeners: CollectionChangeListener<M,T>[];
     private modelListenerMap: WeakMap<T & object,() => void>;
 
     constructor(items: T[], cmp?: (a: T, b: T) => number) {
@@ -190,12 +210,12 @@ export class Collection<T> implements Iterable<T> {
      */
     on(name: 'sort', handler: CollectionSortListener<T>): () => void;
     /**
-     * If the collection contains models, listen for changes to any
+     * If the collection contains Model instances, listen for changes to any
      * of the Models in the collection.
      * @returns a function that removes the listener when called
      */
-    on(name: 'change', handler: CollectionChangeListener<T>): () => void;
-    on(name: 'add' | 'remove' | 'reset' | 'sort' | 'change', handler: CollectionItemListener<T> | CollectionResetListener<T> | CollectionSortListener<T> | CollectionChangeListener<T>): () => void {
+    on(name: 'change', handler: CollectionChangeListener<M,T>): () => void;
+    on(name: 'add' | 'remove' | 'reset' | 'sort' | 'change', handler: CollectionItemListener<T> | CollectionResetListener<T> | CollectionSortListener<T> | CollectionChangeListener<M,T>): () => void {
         if (name === 'add') {
             this.addListeners.push(handler as CollectionItemListener<T>);
             return () => {
@@ -217,7 +237,7 @@ export class Collection<T> implements Iterable<T> {
                 this.sortListeners = this.sortListeners.filter(f => f !== handler);
             };
         } else if (name === 'change') {
-            this.changeListeners.push(handler as CollectionChangeListener<T>);
+            this.changeListeners.push(handler as CollectionChangeListener<M,T>);
             return () => {
                 this.changeListeners = this.changeListeners.filter(f => f !== handler);
             };
@@ -349,6 +369,7 @@ export class Collection<T> implements Iterable<T> {
         if (this.cmp) {
             this.items.sort(this.cmp);
         }
+        this.items.forEach(item => this.track(item));
         this.resetListeners.forEach(fn => fn());
         this.anyListeners.forEach(fn => fn());
     }
@@ -505,18 +526,16 @@ export class Collection<T> implements Iterable<T> {
      * @param cmp the comparison function
      */
     sort(cmp?: (a: T, b: T) => number): void {
-        if (cmp !== undefined) {
+        if (arguments.length > 0) {
             this.cmp = cmp;
         }
-        if (this.cmp === undefined) {
-            this.items.sort();
-        } else {
+        if (this.cmp !== undefined) {
             this.items.sort(this.cmp);
+            this.sortListeners.forEach(fn => fn());
         }
-        this.sortListeners.forEach(fn => fn());
     }
 }
 
-export function makeCollection<T>(items: T[], cmp?: (a: T, b: T) => number): Collection<T> {
+export function makeCollection<T>(items: (T)[], cmp?: (a: T, b: T) => number): Collection<keyof UnModel<T>,T> {
     return new Collection(items, cmp);
 };
