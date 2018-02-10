@@ -1,38 +1,20 @@
 # simplemodel
 
-A tiny, simple, strict, typescript-oriented model and collection API.
+A tiny and simple model and collection API.
 
-It allows for observation of changes to members on models and changes to items within a collection.
-
+* Models act like plain old objects (that are observable for mutations)
+* Collections act like plain old arrays (that are observable for mutations)
 * Zero dependencies
-* Collection index lookup requires a native ES6 runtime (for Proxy)
-* Models act like plain old objects that are observable
-* Collections act like plain old arrays that are observable
-* Similar interface to Backbone.Model and Backbone.Collection, but designed for the capabilities of ES6
-* Library size: 4,309 bytes minified (1,253 bytes gzip-compressed)
-* Works well with `tsc --strict`
-
-This library is heavily inspired by Backbone's Model and Collection classes, but without all of the boilerplate (by leveraging `Proxy` and `Object.defineProperties`).
+* Requires native ES2015 runtime for full feature set (needs `Proxy` for collection length)
+* Collections implement a stable sort
+* Similar in spirit to Backbone.Model and Backbone.Collection (or `Object.observe`), but designed with ES2015 in mind
+* Library size: 5,796 bytes minified (1,611 bytes gzip-compressed)
+* Typescript friendly, works well with `tsc --strict`
 
 
 ## Installation
 
 `npm install @srhazi/simplemodel`
-
-
-## Building
-
-* Note: Minified standalone build depends on [closure-compiler](http://code.google.com/closure/compiler).
-* Version `1.0.1` built with
-  * typescript version: 2.6.2
-  * node version: 4.1.1
-  * amdclean version: 2.7.0
-  * Closure Compiler version: 20130227 (Built on: 2017/09/14 12:51)
-
-1. `git clone https://github.com/sufianrhazi/simplemodel.git`
-2. `cd simplemodel`
-3. `npm install`
-4. `s/dist`
 
 
 ## Basic Usage
@@ -89,6 +71,21 @@ charmander.update({
 lineup.remove(lineup[1]!);
 // log: squirtle removed from the group!
 ```
+
+## Building
+
+* Note: Minified standalone build depends on [closure-compiler](http://code.google.com/closure/compiler).
+* Version `1.0.0` built with
+  * typescript version: 2.6.2
+  * node version: 4.1.1
+  * amdclean version: 2.7.0
+  * Closure Compiler version: 20130227 (Built on: 2017/09/14 12:51)
+
+1. `git clone https://github.com/sufianrhazi/simplemodel.git`
+2. `cd simplemodel`
+3. `npm install`
+4. `s/dist`
+
 
 ## Reference API
 

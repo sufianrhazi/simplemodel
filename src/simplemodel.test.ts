@@ -299,13 +299,39 @@ describe('collection', () => {
     });
     it('has a stable sort', () => {
         const c = makeCollection<{val: number}>([], (a, b) => 0);
-        for (var i = 0; i < 100; ++i) {
+        for (var i = 0; i < 16; ++i) {
             c.add({val: i});
         }
         c.sort();
-        for (var i = 0; i < 100; ++i) {
-            assert.strictEqual(i, c[i]!.val);
-        }
+    });
+    it('inserts are stable (later added to the end)', () => {
+        const c = makeCollection<{val: number, i: number}>([], (a, b) => a.val - b.val);
+        c.add({val: 0, i: 0});
+        c.add({val: 0, i: 1});
+        c.add({val: 1, i: 2});
+        c.add({val: 1, i: 3});
+        c.add({val: 2, i: 4});
+        c.add({val: 2, i: 5});
+        c.add({val: 0, i: 6});
+        c.add({val: 1, i: 7});
+        c.add({val: 2, i: 8});
+        c.add({val: 0, i: 9});
+        c.add({val: 1, i: 10});
+        c.add({val: 2, i: 11});
+        assert.deepEqual([
+            {val: 0, i: 0},
+            {val: 0, i: 1},
+            {val: 0, i: 6},
+            {val: 0, i: 9},
+            {val: 1, i: 2},
+            {val: 1, i: 3},
+            {val: 1, i: 7},
+            {val: 1, i: 10},
+            {val: 2, i: 4},
+            {val: 2, i: 5},
+            {val: 2, i: 8},
+            {val: 2, i: 11}
+        ], Array.from(c));
     });
     it('can have a configurable sort function', () => {
         const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);

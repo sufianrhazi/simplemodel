@@ -270,7 +270,8 @@ export class Collection<M extends keyof T,T> implements Iterable<T> {
 
     /**
      * Add a Model to the collection.
-     * If sorted, the item will be placed at the correctly sorted index.
+     * If sorted, the item will be placed at the correctly sorted index with
+     * O(lg(n)) comparisons.
      */
     add(item: T): void {
         let index: undefined | number;
@@ -278,25 +279,21 @@ export class Collection<M extends keyof T,T> implements Iterable<T> {
             index = this.items.length;
             this.items.push(item);
         } else {
-            let l = 0;
-            let r = this.items.length - 1;
-            let m = 0;
-            while (l <= r) {
-                m = Math.floor((r - l) / 2) + l;
-                const comparison = this.cmp(this.items[m], item);
-                if (comparison < 0) {
-                    l = m + 1;
-                } else if (comparison > 0) {
-                    r = m - 1;
+            let low = 0;
+            let hi = this.items.length;
+            index = 0;
+            while (hi - low > 1) {
+                index = low + Math.floor((hi - low) / 2);
+                let c = this.cmp(item, this.items[index]);
+                if (c >= 0) {
+                    low = index;
                 } else {
-                    break; // found match, insert here
+                    hi = index;
                 }
             }
-            // items[m] is closest
-            if (this.cmp(item, this.items[m]) < 0) { // less than items[m]? insert before
-                index = m;
-            } else { // greater than or equal to items[m]? insert after
-                index = m + 1;
+            let c = this.cmp(item, this.items[index]);
+            if (c >= 0) {
+                index = index + 1;
             }
             this.items.splice(index, 0, item);
         }
@@ -523,6 +520,7 @@ export class Collection<M extends keyof T,T> implements Iterable<T> {
 
     /**
      * Sort the collection and set the comparison function to be cmp (if provided)
+     * Unlike native Array.prototype.sort(), this sort is stable (simple mergesort).
      * @param cmp the comparison function
      */
     sort(cmp?: (a: T, b: T) => number): void {
@@ -530,8 +528,32 @@ export class Collection<M extends keyof T,T> implements Iterable<T> {
             this.cmp = cmp;
         }
         if (this.cmp !== undefined) {
-            this.items.sort(this.cmp);
+            this._mergesort();
             this.sortListeners.forEach(fn => fn());
+        }
+    }
+
+    private _mergesort(): void {
+        var dest = this.items;
+        var src = Array.from(dest);
+        this._mergesortRecurse(0, src, dest, src.length);
+    }
+
+    private _mergesortRecurse(low: number, src: T[], dst: T[], hi: number): void {
+        if (hi - low < 2) return;
+        var mid = low + Math.floor((hi - low) / 2);
+        this._mergesortRecurse(low, dst, src, mid);
+        this._mergesortRecurse(mid, dst, src, hi);
+        var i = low;
+        var j = mid;
+        for (var k = low; k < hi; ++k) {
+            if (i < mid && (j >= hi || this.cmp!(src[i], src[j]) <= 0)) {
+                dst[k] = src[i];
+                ++i;
+            } else {
+                dst[k] = src[j];
+                ++j;
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@srhazi/simplemodel",
-  "version": "0.9.0",
+  "version": "1.0.0",
   "description": "A simple typescript/ES6-oriented model/collection API",
   "homepage": "https://abstract.properties/work/simplemodel.html",
   "repository": {
@@ -20,8 +20,8 @@
   "author": "Sufian Rhazi <sufian@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "amdclean": "^2.7.0",
-    "typescript": "^2.6.0",
+    "amdclean": "2.7.0",
+    "typescript": "2.6.2",
     "jasmine": "2.9.0",
     "@types/jasmine": "2.8.5",
     "chai": "4.1.2",
