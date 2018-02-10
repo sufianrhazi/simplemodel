@@ -29,53 +29,55 @@ const squirtle = makeModel({ name: "squirtle", type: "water", level: 10});
 const charmander = makeModel({ name: "charmander", type: "fire", level: 15});
 const lineup = makeCollection([pikachu, squirtle]);
 
-// models are observable by property name
+// -> models are observable by property name
 squirtle.on('name', (newValue, oldValue) => {
-    console.log(`squirtle's name changed from ${oldValue} to ${newValue}`);
+    console.log(`squirtle's name changed from <${oldValue}> to <${newValue}>`);
 });
 
-// collections are observable for adds/removes/resets/sorts
+// * Collections are observable for adds/removes/resets/sorts
 lineup.on('add', (item, index) => {
-    console.log(`${item.name} added to the group!`)
+    console.log(`${item.name} added to the group at index ${index}!`);
 });
 lineup.on('remove', (item, index) => {
-    console.log(`${item.name} removed from the group!`)
+    console.log(`${item.name} removed from the group! (was index ${index})`);
 });
 
-// collections that hold models are also observable for model changes
+// * Collections that hold Models are also observable for model changes
 lineup.on('change', (item, index, field, newValue, oldValue) => {
-    console.log(`${item.name}'s ${field} changed from ${oldValue} to ${newValue}!`);
+    console.log(`${item.name} (pokemon ${index}) ${field} changed from <${oldValue}> to <${newValue}>!`);
 });
 
-// models act just like objects
+// * Models act just like objects
 squirtle.name = squirtle.name + ', the destroyer';
-// log: squirtle's name changed from squirtle to squirtle, the destroyer
+// "squirtle's name changed from <squirtle> to <squirtle, the destroyer>"
+// "squirtle, the destroyer (pokemon 1) name changed from <squirtle> to <squirtle, the destroyer>"
+// * Why two logs? There's a 'name' handler on the model and 'change' handler on the collection.
 
-// collections act just like arrays (though index access is typesafe)
+// * Collections act just like arrays (though index access is typesafe)
 lineup[0]!.level += 1;
-// log: pikachu's level changed from 17 to 18!
+// "pikachu (pokemon 0) level changed from <17> to <18>!"
 
 // collections can be added to
 lineup.add(charmander);
-// log: charmander added to the group!
+// log: charmander added to the group at index 2!
 
 // models can be updated atomically
 charmander.update({
     level: charmander.level + 1,
     name: "charmeleon"
 });
-// log: charmander's name changed from charmander to charmeleon!
-// log: charmander's level changed from 15 to 16!
+// log: charmeleon's level changed from <15> to <16>!
+// log: charmeleon's name changed from <charmander> to <charmeleon>!
 
 // collections can be removed
 lineup.remove(lineup[1]!);
-// log: squirtle removed from the group!
+// log: squirtle, the destroyer removed from the group! (was index 0)
 ```
 
 ## Building
 
 * Note: Minified standalone build depends on [closure-compiler](http://code.google.com/closure/compiler).
-* Version `1.0.0` built with
+* Version `1.0.1` built with
   * typescript version: 2.6.2
   * node version: 4.1.1
   * amdclean version: 2.7.0
