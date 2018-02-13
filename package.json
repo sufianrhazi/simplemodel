@@ -1,6 +1,6 @@
 {
   "name": "@srhazi/simplemodel",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "A simple typescript/ES6-oriented model/collection API",
   "homepage": "https://abstract.properties/work/simplemodel.html",
   "repository": {

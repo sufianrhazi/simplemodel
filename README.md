@@ -77,7 +77,7 @@ lineup.remove(lineup[1]!);
 ## Building
 
 * Note: Minified standalone build depends on [closure-compiler](http://code.google.com/closure/compiler).
-* Version `1.0.1` built with
+* Version `2.0.0` built with
   * typescript version: 2.6.2
   * node version: 4.1.1
   * amdclean version: 2.7.0
