@@ -13,7 +13,7 @@ export interface ModelBehavior<T> {
      * @param fn
      * @returns a function that removes the listener when called
      */
-    on<K extends keyof T>(key: keyof T, fn: ModelChangeHandler<T, K>): () => void;
+    on<K extends keyof T>(key: K, fn: ModelChangeHandler<T, K>): () => void;
 
     /**
      * Listen for a change to any property

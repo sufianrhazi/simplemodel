@@ -394,4 +394,28 @@ describe('collection', () => {
         assert.strictEqual(10, changes[3].curr);        
     });
     
+    it('does not infer "on" handler parameters to be | undefined', () => {
+        interface SimpleStruct {
+            bar: string,
+            baz: number | null,
+            bum: boolean | undefined,
+        }
+
+        let val: Model<SimpleStruct> = makeModel({
+            bar: '',
+            baz: null,
+            bum: true,
+        });
+        
+        val.on('bar', (curr, prev) => {
+            let assertion: typeof curr extends string ? true : never = true;
+        });
+        val.on('baz', (curr, prev) => {
+            let assertion: typeof curr extends number | null ? true : never = true;
+        });
+        val.on('bum', (curr, prev) => {
+            let assertion1: typeof curr extends boolean | undefined ? true : never = true;
+            let assertion2: typeof curr extends boolean ? never : true = true;
+        });
+    });
 });
