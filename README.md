@@ -77,11 +77,13 @@ lineup.remove(lineup[1]!);
 ## Building
 
 * Note: Minified standalone build depends on [closure-compiler](http://code.google.com/closure/compiler).
-* Version `2.0.0` built with
-  * typescript version: 2.6.2
-  * node version: 4.1.1
+* Version `3.0.0` built with
+  * typescript version: 2.8.3
+  * node version: v6.11.3
   * amdclean version: 2.7.0
   * Closure Compiler version: 20130227 (Built on: 2017/09/14 12:51)
+* Note: Version `3.0.0` has tests which rely on TypeScript 2.8 features (conditional types). The library *should* build
+  fine in earlier versions (back to at least 2.6), but tests will not build.
 
 1. `git clone https://github.com/sufianrhazi/simplemodel.git`
 2. `cd simplemodel`
