@@ -8,7 +8,7 @@ A tiny and simple model and collection API.
 * Requires native ES2015 runtime for full feature set (needs `Proxy` for collection length)
 * Collections implement a stable sort
 * Similar in spirit to Backbone.Model and Backbone.Collection (or `Object.observe`), but designed with ES2015 in mind
-* Library size: 5,796 bytes minified (1,611 bytes gzip-compressed)
+* v4.0.0 Library size: 11,909 bytes minified (2,251 bytes gzip-compressed)
 * Typescript friendly, works well with `tsc --strict`
 
 
@@ -20,14 +20,14 @@ A tiny and simple model and collection API.
 ## Basic Usage
 
 ```typescript
-import { Model, makeModel, Collection, makeCollection } from '@sufianrhazi/simplemodel';
+import { Model, makeModel, Collection, makeModelCollection } from '@sufianrhazi/simplemodel';
 
 interface Pokemon { name: string, type: string, level: number };
 
 const pikachu = makeModel({ name: "pikachu", type: "electric", level: 17});
 const squirtle = makeModel({ name: "squirtle", type: "water", level: 10});
 const charmander = makeModel({ name: "charmander", type: "fire", level: 15});
-const lineup = makeCollection([pikachu, squirtle]);
+const lineup = makeModelCollection([pikachu, squirtle]);
 
 // -> models are observable by property name
 squirtle.on('name', (newValue, oldValue) => {
@@ -77,11 +77,12 @@ lineup.remove(lineup[1]!);
 ## Building
 
 * Note: Minified standalone build depends on [closure-compiler](http://code.google.com/closure/compiler).
-* Version `3.0.1` built with
-  * typescript version: 2.8.3
-  * node version: v6.11.3
+* Version `4.0.0` built with
+  * typescript version: 4.0.2
+  * node version: v12.16.2
   * amdclean version: 2.7.0
-  * Closure Compiler version: 20130227 (Built on: 2017/09/14 12:51)
+  * Closure Compiler version: v20200517 (Built on: 2020-05-18 22:36)
+* Note: Version `4.0.0` compatible with TypeScript version 3.0.3+
 * Note: Version `3.0.1` has tests which rely on TypeScript 2.8 features (conditional types). The library *should* build
   fine in earlier versions (back to at least 2.6), but tests will not build.
 
@@ -133,20 +134,32 @@ interface ModelBehavior<T> {
 
 ### Collection
 
-A collection behaves *almost* like arrays that also have observable behavior. Notable exceptions:
+A collection behaves *almost* like arrays that also have observable behavior. There are two types of collections:
+
+1. `makeSimpleCollection<T>(items: T[], cmp: (a: T, b: T) => number): SimpleCollection<T>` - observable (and sorted) list of any type of objects
+2. `makeModelCollection<T>(items: Model<T>[], cmp: (a: T, b: T) => number): ModelCollection<T>` - observable (and sorted) list of model objects
+
+In addition to `add`, `remove`, and `reset` events, `ModelCollection<T>` objects also emit `change` events when a particular model within it changes.
+
+There are a few quirks to collections:
 
 * A collection *may* be sorted by providing a comparison function upon creation
-  * Sort order is *preserved upon addition*. Items added will be inserted in sort order
-  * The comparison function can be set via calling `.sort(fn)`
-  * Calling `.sort(undefined)` will *remove* the preserved sort order
-  * Calling `.sort()` with no parameters will *re-sort* the collection, which is useful when you know the contained items have mutated.
-  * If sorted, inserts are done via binary search, which adds `O(lg(n))` comparisons prior to resizing the underlying array via `.splice()`
-* the `.push()`, `.shift()`, or `.splice()` methods do not exist, use `.add()`, `.remove()`, or `.reset()`
-* Index lookup is strict: `collection[1]` has the type `T | undefined`
+  * Sort order is *preserved* upon addition. Newly added items will be inserted in sort order
+  * If items are mutated, sort order is *not preserved*, you must call `.sort()` to *re-sort* the collection.
+  * The comparison function can be set and cleared via calling `.sort(fn)` / `.sort(undefined)`
+  * If sorted, inserts are performed via binary search, which adds `O(lg(n))` comparisons in addition to the overhead of resizing the underying array via `.splice()`
+
+The following methods typical in arrays are *not* implemented:
+* `.copyWithin()`
+* `.fill()`
+* `.keys()`
+* `.reverse()`
+* `.splice()`
+* `.values()`
 
 ```typescript
 // A collection is an array that has some additional behavior
-type Collection<T> = ArrayIsh<T> & {
+type ModelCollection<T> = ArrayIsh<T> & {
     /**
      * Listen for items added to this collection
      * @returns a function that removes the listener when called

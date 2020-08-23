@@ -1,7 +1,7 @@
 /// <reference path="../node_modules/@types/jasmine/index.d.ts" />
 
 import { assert } from "chai";
-import { makeModel, makeCollection, Model } from './simplemodel';
+import { makeModel, makeModelCollection, makeSimpleCollection, Model } from './simplemodel';
 
 describe('model', () => {
     it('acts like an object', () => {
@@ -163,7 +163,7 @@ describe('model', () => {
 
 describe('collection', () => {
     it('acts like an array', () => {
-        const c = makeCollection([0,1,2,3,4,5]);
+        const c = makeSimpleCollection([0,1,2,3,4,5]);
         assert.strictEqual(0, c[0]);
         assert.strictEqual(3, c[3]);
         assert.strictEqual(5, c[5]);
@@ -171,7 +171,7 @@ describe('collection', () => {
         assert.isUndefined(c[6]);
     });
     it('can be iterated over', () => {
-        const c = makeCollection([1,3,5]);
+        const c = makeSimpleCollection([1,3,5]);
         let acc = 0;
         for (let i of c) {
             acc += i;
@@ -179,7 +179,7 @@ describe('collection', () => {
         assert.strictEqual(9, acc);
     });
     it('may be automatically sorted', () => {
-        const c = makeCollection([1,3,2,4,0], (a, b) => a - b);
+        const c = makeSimpleCollection([1,3,2,4,0], (a, b) => a - b);
         assert.deepEqual([0,1,2,3,4], Array.from(c));
         c.add(2.5);
         assert.deepEqual([0,1,2,2.5,3,4], Array.from(c));
@@ -187,7 +187,7 @@ describe('collection', () => {
         assert.deepEqual([0,2,2.5,3,4], Array.from(c));
     });
     it('can be observed for adds', () => {
-        const c = makeCollection<number>([]);
+        const c = makeSimpleCollection<number>([]);
         const observed: {item: number, index: number}[] = [];
         const off = c.on('add', (item, index) => {
             observed.push({item, index});
@@ -206,7 +206,7 @@ describe('collection', () => {
         ], observed);
     });
     it('can be observed for adds when sorted', () => {
-        const c = makeCollection<number>([], (a, b) => a - b);
+        const c = makeSimpleCollection<number>([], (a, b) => a - b);
         const observed: {item: number, index: number}[] = [];
         const off = c.on('add', (item, index) => {
             observed.push({item, index});
@@ -225,7 +225,7 @@ describe('collection', () => {
         ], observed);
     });
     it('can be observed for removes', () => {
-        const c = makeCollection(['foo', 'bar', 'baz']);
+        const c = makeSimpleCollection(['foo', 'bar', 'baz']);
         const observed: {item: string, index: number}[] = [];
         const off = c.on('remove', (item, index) => {
             observed.push({item, index});
@@ -241,7 +241,7 @@ describe('collection', () => {
         ], observed);
     });
     it('can be observed for removes when sorted', () => {
-        const c = makeCollection(['foo', 'bar', 'baz'], (a, b) => a.localeCompare(b));
+        const c = makeSimpleCollection(['foo', 'bar', 'baz'], (a, b) => a.localeCompare(b));
         const observed: {item: string, index: number}[] = [];
         const off = c.on('remove', (item, index) => {
             observed.push({item, index});
@@ -257,7 +257,7 @@ describe('collection', () => {
         ], observed);
     });
     it('can be observed for resets', () => {
-        const c = makeCollection(['foo', 'bar', 'baz']);
+        const c = makeSimpleCollection(['foo', 'bar', 'baz']);
         let numResets = 0;
         const off = c.on('reset', () => {
             numResets++;
@@ -270,7 +270,7 @@ describe('collection', () => {
         assert.strictEqual(3, numResets);
     });
     it('can be observed for any changes', () => {
-        const c = makeCollection(['foo', 'bar', 'baz']);
+        const c = makeSimpleCollection(['foo', 'bar', 'baz']);
         let numChanges = 0;
         const off = c.onAny(() => {
             numChanges++;
@@ -283,7 +283,7 @@ describe('collection', () => {
         assert.strictEqual(3, numChanges);
     });
     it('can be sorted on demand', () => {
-        const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
+        const c = makeModelCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
         assert.deepEqual(['a', 'b', 'c'], c.map(item => item.v));
         c[0]!.p = 2.5;
         assert.deepEqual(['a', 'b', 'c'], c.map(item => item.v));
@@ -291,21 +291,21 @@ describe('collection', () => {
         assert.deepEqual(['b', 'a', 'c'], c.map(item => item.v));
     });
     it('triggers sort on sorted', () => {
-        const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
+        const c = makeModelCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
         let numResets = 0;
         c.on('sort', () => numResets++);
         c.sort();
         assert.strictEqual(1, numResets);
     });
     it('has a stable sort', () => {
-        const c = makeCollection<{val: number}>([], (a, b) => 0);
+        const c = makeModelCollection<{val: number}>([], (a, b) => 0);
         for (var i = 0; i < 16; ++i) {
             c.add({val: i});
         }
         c.sort();
     });
     it('inserts are stable (later added to the end)', () => {
-        const c = makeCollection<{val: number, i: number}>([], (a, b) => a.val - b.val);
+        const c = makeModelCollection<{val: number, i: number}>([], (a, b) => a.val - b.val);
         c.add({val: 0, i: 0});
         c.add({val: 0, i: 1});
         c.add({val: 1, i: 2});
@@ -318,7 +318,7 @@ describe('collection', () => {
         c.add({val: 0, i: 9});
         c.add({val: 1, i: 10});
         c.add({val: 2, i: 11});
-        assert.deepEqual([
+        assert.deepEqual<any>([
             {val: 0, i: 0},
             {val: 0, i: 1},
             {val: 0, i: 6},
@@ -334,7 +334,7 @@ describe('collection', () => {
         ], Array.from(c));
     });
     it('can have a configurable sort function', () => {
-        const c = makeCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
+        const c = makeModelCollection([{p: 1, v: 'a'}, {p: 2, v: 'b'}, {p: 3, v: 'c'}], (a, b) => a.p - b.p);
         assert.deepEqual(['a', 'b', 'c'], c.map(item => item.v));
         c.sort((a, b) => b.p - a.p);
         assert.deepEqual(['c', 'b', 'a'], c.map(item => item.v));
@@ -344,7 +344,7 @@ describe('collection', () => {
     it('triggers change events when model items are changed', () => {
         const a = makeModel({x: 1, y: 3});
         const b = makeModel({x: 2, y: 4});
-        const c = makeCollection([a], (a, b) => a.x - b.x);
+        const c = makeModelCollection([a], (a, b) => a.x - b.x);
         c.add(b);
         const changes: {
             item: Model<{x: number, y: number}>,
